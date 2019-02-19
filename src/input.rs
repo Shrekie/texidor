@@ -5,7 +5,7 @@ pub struct SelectionPicker<'a> {
 
 impl<'a> SelectionPicker<'a> {
 
-  // @todo: this instancation goes into a box in control of templating input data
+  // @todo: this instantiation goes into a box in control of templating input data
   fn new(options: &'a [&'a str]) -> SelectionPicker<'a> {
     SelectionPicker { options }
   }
