@@ -11,7 +11,7 @@ impl<'a> SelectionPicker<'a> {
   }
 
   // tries to match with one of option field
-  fn select<'b>(&self, input: Vec<String>) -> Option<String> {
+  fn select(&self, input: Vec<String>) -> Option<String> {
     // first argument is query
     // @refactor: grabber of query from input to check if it is some.
     let option = &input[1];
