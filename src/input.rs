@@ -4,7 +4,6 @@ pub struct SelectionPicker<'a> {
 }
 
 impl<'a> SelectionPicker<'a> {
-
   // @todo: this instantiation goes into a box in control of templating input data
   fn new(options: &'a [&'a str]) -> SelectionPicker<'a> {
     SelectionPicker { options }
@@ -19,7 +18,7 @@ impl<'a> SelectionPicker<'a> {
     match self.options.iter().find(|x| **x == option) {
       // 'unwrap' with non referencing string object
       Some(v) => Some(String::from(*v)),
-      None => None
+      None => None,
     }
   }
 }
@@ -38,7 +37,7 @@ mod tests {
     assert!(!selected.is_none());
     match selected {
       Some(v) => assert_eq!("create", v),
-      None => println!("Error"),
+      None => panic!("selected is none"),
     };
   }
 }
