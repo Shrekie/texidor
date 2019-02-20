@@ -29,12 +29,10 @@ impl Querier {
   {
     // result could timeout before matched
     let mut result = None;
-
     for x in 0..timeout {
       // cant own more than once, with closure must clone
       result = selection.select(get_input().clone());
     }
-
     result.ok_or(String::from("Timeout Error"))
   }
 
