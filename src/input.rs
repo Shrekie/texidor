@@ -35,8 +35,6 @@ impl Querier {
     }
     result.ok_or(String::from("Timeout Error"))
   }
-
-  // querier.prompt(menu, 10, |line| input);
 }
 
 // file grab commands for FileCommencer
