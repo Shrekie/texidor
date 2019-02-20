@@ -1,8 +1,46 @@
 use std::fs::File;
+use std::io;
 
+// gets user input, stages selectors for input
+// @todo: make selector trait
+pub struct Querier {}
+
+impl Querier {
+  fn new() -> Querier {
+    Querier {}
+  }
+
+  // @todo: @urgent: cleanup
+  fn prompt<'a, F>(
+    &self,
+    selection: &SelectionPicker,
+    timeout: usize,
+    get_input: F,
+    // @todo: make timeout error for second result arg
+  ) -> Result<String, String>
+  where
+    F: Fn() -> &'a String,
+  {
+    let mut result = None;
+    let mut timeout_counter = 0;
+    
+    for x in 0..timeout {
+      result = selection.select(get_input().clone());
+      if result.is_none() {
+        timeout_counter = x;
+      }
+    }
+
+    result.ok_or(String::from("Timeout Error"))
+  }
+
+  // querier.prompt(menu, 10, |line| input);
+}
+
+// file grab commands for FileCommencer
 enum FileGrab {
   New,
-  Existing
+  Existing,
 }
 
 // returns created or already existing files
@@ -12,7 +50,7 @@ pub struct FileCommencer {
 
 impl FileCommencer {
   fn new() -> FileCommencer {
-    FileCommencer { }
+    FileCommencer {}
   }
 
   fn create(&self, name: String) -> Result<File, std::io::Error> {
@@ -23,11 +61,11 @@ impl FileCommencer {
     File::open(name)
   }
 
-  fn grab (&self, name: String, grab: FileGrab) -> Result<File, std::io::Error> {
+  fn grab(&self, name: String, grab: FileGrab) -> Result<File, std::io::Error> {
     // returns moved file object
     match grab {
       New => self.create(name),
-      Existing => self.get(name)
+      Existing => self.get(name),
     }
   }
 }
@@ -36,6 +74,7 @@ impl FileCommencer {
 pub struct SelectionPicker<'a> {
   // a tree of choices
   options: &'a [&'a str],
+  // @suggestion: add field for displaying a label
 }
 
 impl<'a> SelectionPicker<'a> {
@@ -61,7 +100,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn select_menu_option_create() {
+  fn select_picker_option_create() {
     let input = String::from("create");
     let options = ["create", "edit"];
     let menu = SelectionPicker::new(&options);
@@ -74,9 +113,27 @@ mod tests {
   }
 
   #[test]
+  fn keep_prompting_input() {
+    let input = String::from("create");
+    let options = ["create", "edit"];
+    let menu = SelectionPicker::new(&options);
+
+    let querier = Querier::new();
+    let result = querier.prompt(&menu, 10, || &input);
+    assert!(result.is_ok());
+
+    /*
+      let result = terminal.prompt(menu, 10, |line| {
+        io::stdin().read_line(line).expect("Failed to read line")
+      });
+    */
+  }
+
+  #[test]
   fn create_new_file() {
     let file_name = String::from("hello.txt");
     let file_commencer = FileCommencer::new();
+    // @help: see how to remove file creation when testing
     let file = file_commencer.grab(file_name, FileGrab::New);
     assert!(file.is_ok());
   }
