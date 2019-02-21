@@ -11,7 +11,7 @@ impl Querier {
   }
 
   // displays description and parses input from user
-  fn input_format(&self, input: String, selection: &SelectionPicker) -> Option<String> {
+  fn input_format<T: Promptable>(&self, input: String, selection: &T) -> Option<String> {
     selection.describe();
     selection.select(input)
   }
@@ -19,13 +19,10 @@ impl Querier {
   // keeps asking for input until selected
   // @refactor: name imply more meaning
   // that you are waiting for query
-  pub fn prompt<'a, F>(
-    &self,
-    // @refactor: &SelectionPicker trait or 'override'
-    selection: &SelectionPicker,
-    get_input: F,
-  ) -> Result<String, String>
+  pub fn prompt<'a, T, F>(&self, selection: &T, get_input: F) -> Result<String, String>
   where
+    // promptable selector
+    T: Promptable,
     // input generating closure,
     // normally formatted from terminal
     F: Fn() -> &'a String,
@@ -33,7 +30,7 @@ impl Querier {
     let mut result = None;
     while result.is_none() {
       // cant own more than once, with closure 'must' clone
-      result = self.input_format(get_input().clone(), &selection);
+      result = self.input_format(get_input().clone(), selection);
     }
     result.ok_or(String::from("Timeout Error"))
   }
@@ -82,6 +79,13 @@ impl FileCommencer {
 * V
 */
 
+pub trait Promptable {
+  // how to select output from option
+  fn select(&self, option: String) -> Option<String>;
+  // display description to be visible in a prompt
+  fn describe(&self);
+}
+
 // goes into a holder to represent a selection
 pub struct SelectionPicker<'a> {
   // a tree of choices
@@ -97,8 +101,9 @@ impl<'a> SelectionPicker<'a> {
       description,
     }
   }
+}
 
-  // display description to be visible in a prompt
+impl<'a> Promptable for SelectionPicker<'a> {
   fn describe(&self) {
     println!("{}", self.description);
   }
@@ -123,17 +128,16 @@ pub struct StaticWriter<'a> {
 
 impl<'a> StaticWriter<'a> {
   fn new(description: &'a str) -> StaticWriter<'a> {
-    StaticWriter {
-      description,
-    }
+    StaticWriter { description }
   }
+}
 
-  // display description to be visible in a prompt
+impl<'a> Promptable for StaticWriter<'a> {
   fn describe(&self) {
     println!("{}", self.description);
   }
 
-  // just checks if option input is not empty then 
+  // just checks if option input is not empty then
   // passes it back as accepted
   fn select(&self, option: String) -> Option<String> {
     // no characters is none
@@ -186,11 +190,11 @@ mod tests {
     let querier = Querier::new();
     let result = querier.prompt(&menu, || &input);
     assert!(result.is_ok());
-
     /*
-      let result = terminal.prompt(menu, 10, |line| {
-        io::stdin().read_line(line).expect("Failed to read line")
-      });
+    let querier = Querier::new();
+    let result = querier.prompt(&menu, || &io::stdin().read_line(line)
+      .expect("Failed to read line"));
+    });
     */
   }
 
