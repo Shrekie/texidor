@@ -32,7 +32,7 @@ impl Querier {
       // cant own more than once, with closure 'must' clone
       result = self.input_format(get_input().clone(), selection);
     }
-    result.ok_or(String::from("Timeout Error"))
+    result.ok_or(String::from("Prompt Error"))
   }
 }
 
