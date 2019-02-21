@@ -3,35 +3,37 @@ use std::io;
 
 // gets user input, stages selectors for input
 // @todo: make selector trait
-pub struct Querier {}
+struct Querier {}
 
 impl Querier {
   fn new() -> Querier {
     Querier {}
   }
 
-  // keeps asking for input until timeout
-  // @todo: @urgent: cleanup
-  // @refactor: name imply more meaning 
+  // displays description and parses input from user
+  fn input_format(&self, input: String, selection: &SelectionPicker) -> Option<String> {
+    selection.describe();
+    selection.select(input)
+  }
+
+  // keeps asking for input until selected
+  // @refactor: name imply more meaning
   // that you are waiting for query
-  fn prompt<'a, F>(
+  pub fn prompt<'a, F>(
     &self,
-    // @refactor: trait or 'override'
+    // @refactor: &SelectionPicker trait or 'override'
     selection: &SelectionPicker,
-    timeout: usize,
     get_input: F,
-    // @todo: make timeout error for second result arg
   ) -> Result<String, String>
   where
-    // input generating closure, 
+    // input generating closure,
     // normally formatted from terminal
     F: Fn() -> &'a String,
   {
-    // result could timeout before matched
     let mut result = None;
-    for x in 0..timeout {
+    while result.is_none() {
       // cant own more than once, with closure 'must' clone
-      result = selection.select(get_input().clone());
+      result = self.input_format(get_input().clone(), &selection);
     }
     result.ok_or(String::from("Timeout Error"))
   }
@@ -70,16 +72,35 @@ impl FileCommencer {
   }
 }
 
+/*
+* ------------------------------------------------------
+* Promptable selection components,
+* able to be prompted to screen and wait for user input,
+* used with querier.prompt()
+* ------------------------------------------------------
+* |
+* V
+*/
+
 // goes into a holder to represent a selection
 pub struct SelectionPicker<'a> {
   // a tree of choices
   options: &'a [&'a str],
-  // @suggestion: add field for displaying a label
+  // label describing selection
+  description: &'a str,
 }
 
 impl<'a> SelectionPicker<'a> {
-  fn new(options: &'a [&'a str]) -> SelectionPicker<'a> {
-    SelectionPicker { options }
+  fn new(options: &'a [&'a str], description: &'a str) -> SelectionPicker<'a> {
+    SelectionPicker {
+      options,
+      description,
+    }
+  }
+
+  // display description to be visible in a prompt
+  fn describe(&self) {
+    println!("{}", self.description);
   }
 
   // tries to match with one of option field
@@ -95,15 +116,45 @@ impl<'a> SelectionPicker<'a> {
   }
 }
 
+pub struct StaticWriter<'a> {
+  // label describing selection
+  description: &'a str,
+}
+
+impl<'a> StaticWriter<'a> {
+  fn new(description: &'a str) -> StaticWriter<'a> {
+    StaticWriter {
+      description,
+    }
+  }
+
+  // display description to be visible in a prompt
+  fn describe(&self) {
+    println!("{}", self.description);
+  }
+
+  // just checks if option input is not empty then 
+  // passes it back as accepted
+  fn select(&self, option: String) -> Option<String> {
+    // no characters is none
+    if option.chars().count() > 0 {
+      Some(option)
+    } else {
+      None
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
 
   #[test]
-  fn select_picker_option_create() {
+  fn select_picker_selection_create() {
+    let description = String::from("Do you want to create or edit file?");
     let input = String::from("create");
     let options = ["create", "edit"];
-    let menu = SelectionPicker::new(&options);
+    let menu = SelectionPicker::new(&options, &description);
     let selected = menu.select(input);
 
     match selected {
@@ -113,13 +164,27 @@ mod tests {
   }
 
   #[test]
-  fn keep_prompting_input() {
+  fn static_writer_input_filename() {
+    let description = String::from("Please enter filename");
+    let input = String::from("hello.txt");
+    let text_box = StaticWriter::new(&description);
+    let selected = text_box.select(input);
+
+    match selected {
+      Some(v) => assert_eq!("hello.txt", v),
+      None => panic!("selected is none"),
+    };
+  }
+
+  #[test]
+  fn querier_keep_prompting_input() {
+    let description = String::from("Do you want to create or edit file?");
     let input = String::from("create");
     let options = ["create", "edit"];
-    let menu = SelectionPicker::new(&options);
+    let menu = SelectionPicker::new(&options, &description);
 
     let querier = Querier::new();
-    let result = querier.prompt(&menu, 10, || &input);
+    let result = querier.prompt(&menu, || &input);
     assert!(result.is_ok());
 
     /*
