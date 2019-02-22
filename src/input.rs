@@ -1,8 +1,39 @@
 use std::fs::File;
 use std::io;
 
+// before editing files, this is the control 
+// to select exisiting or create new file
+struct DirectoryPeaker {
+  menu: SelectionPicker,
+  name_file: StaticWriter
+}
+
+impl<'a> DirectoryPeaker {
+  pub fn new() -> DirectoryPeaker {
+    DirectoryPeaker {
+      menu: DirectoryPeaker::menu(),
+      name_file: DirectoryPeaker::nameFile()
+    }
+  }
+
+  // create or edit file menu
+  fn menu() -> SelectionPicker {
+    SelectionPicker::new(
+      Box::new(["create", "edit"]),
+      "Write 'create' or 'edit'",
+    )
+  }
+
+  // used both by new and edit file
+  // to specify which file to target
+  fn nameFile() -> StaticWriter {
+    StaticWriter::new(
+      "Write filename"
+    )
+  }
+}
+
 // gets user input, stages selectors for input
-// @todo: make selector trait
 struct Querier {}
 
 impl Querier {
@@ -69,16 +100,6 @@ impl FileCommencer {
   }
 }
 
-/*
-* ------------------------------------------------------
-* Promptable selection components,
-* able to be prompted to screen and wait for user input,
-* used with querier.prompt()
-* ------------------------------------------------------
-* |
-* V
-*/
-
 pub trait Promptable {
   // how to select output from option
   fn select(&self, option: String) -> Option<String>;
@@ -86,16 +107,26 @@ pub trait Promptable {
   fn describe(&self);
 }
 
+/*
+* ------------------------------------------------------
+* Promptable selection input component
+* ------------------------------------------------------
+* able to be prompted to screen and wait for user input,
+* used with querier.prompt()
+* 
+*
+*/
+
 // goes into a holder to represent a selection
-pub struct SelectionPicker<'a> {
+pub struct SelectionPicker {
   // a tree of choices
-  options: &'a [&'a str],
+  options: Box<[&'static str]>,
   // label describing selection
-  description: &'a str,
+  description: &'static str,
 }
 
-impl<'a> SelectionPicker<'a> {
-  fn new(options: &'a [&'a str], description: &'a str) -> SelectionPicker<'a> {
+impl SelectionPicker {
+  fn new(options: Box<[&'static str]>, description: &'static str) -> SelectionPicker {
     SelectionPicker {
       options,
       description,
@@ -103,7 +134,7 @@ impl<'a> SelectionPicker<'a> {
   }
 }
 
-impl<'a> Promptable for SelectionPicker<'a> {
+impl Promptable for SelectionPicker {
   fn describe(&self) {
     println!("{}", self.description);
   }
@@ -117,22 +148,22 @@ impl<'a> Promptable for SelectionPicker<'a> {
       // find matching on option self field
       .find(|v| **v == option)
       // 'unwrap' to move string object
-      .and_then(|v| Some(String::from(*v)))
+      .and_then(|v| Some(v.to_string()))
   }
 }
 
-pub struct StaticWriter<'a> {
+pub struct StaticWriter {
   // label describing selection
-  description: &'a str,
+  description: &'static str,
 }
 
-impl<'a> StaticWriter<'a> {
-  fn new(description: &'a str) -> StaticWriter<'a> {
+impl StaticWriter {
+  fn new(description: &'static str) -> StaticWriter {
     StaticWriter { description }
   }
 }
 
-impl<'a> Promptable for StaticWriter<'a> {
+impl Promptable for StaticWriter {
   fn describe(&self) {
     println!("{}", self.description);
   }
@@ -155,12 +186,13 @@ mod tests {
 
   #[test]
   fn select_picker_selection_create() {
-    let description = String::from("Do you want to create or edit file?");
     let input = String::from("create");
-    let options = ["create", "edit"];
-    let menu = SelectionPicker::new(&options, &description);
-    let selected = menu.select(input);
+    let menu = SelectionPicker::new(
+      Box::new(["create", "edit"]),
+      "Do you want to create or edit file?",
+    );
 
+    let selected = menu.select(input);
     match selected {
       Some(v) => assert_eq!("create", v),
       None => panic!("selected is none"),
@@ -169,9 +201,8 @@ mod tests {
 
   #[test]
   fn static_writer_input_filename() {
-    let description = String::from("Please enter filename");
     let input = String::from("hello.txt");
-    let text_box = StaticWriter::new(&description);
+    let text_box = StaticWriter::new("Please enter filename");
     let selected = text_box.select(input);
 
     match selected {
@@ -182,14 +213,16 @@ mod tests {
 
   #[test]
   fn querier_keep_prompting_input() {
-    let description = String::from("Do you want to create or edit file?");
     let input = String::from("create");
-    let options = ["create", "edit"];
-    let menu = SelectionPicker::new(&options, &description);
+    let menu = SelectionPicker::new(
+      Box::new(["create","edit"]),
+      "Do you want to create or edit file?",
+    );
 
     let querier = Querier::new();
     let result = querier.prompt(&menu, || &input);
     assert!(result.is_ok());
+    
     /*
     let querier = Querier::new();
     let result = querier.prompt(&menu, || &io::stdin().read_line(line)
