@@ -1,5 +1,5 @@
 mod input;
 
 fn main() {
-    println!("Hello, world!");
+    input::Ostrich::new();
 }

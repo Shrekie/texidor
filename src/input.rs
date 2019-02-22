@@ -1,35 +1,54 @@
 use std::fs::File;
 use std::io;
 
-struct DirectoryPeaker {
-  menu: SelectionPicker,
-  name_file: StaticWriter
+pub struct Ostrich {
+  querier: Querier,
+  directory_peaker: DirectoryPeaker,
 }
 
-// before editing files, this is the control 
+// body of the application
+impl Ostrich {
+  pub fn new() {
+    let ostrich = Ostrich {
+      querier: Querier::new(),
+      directory_peaker: DirectoryPeaker::new(),
+    };
+
+    ostrich.file_menu();
+  }
+
+  // prompt the file menu
+  fn file_menu(&self) {
+    self
+      .querier
+      .prompt(&self.directory_peaker.menu, || self.querier.stdin_line());
+  }
+}
+
+struct DirectoryPeaker {
+  menu: SelectionPicker,
+  file_namer: StaticWriter,
+}
+
+// before editing files, this is the control
 // to select exisiting or create new file
 impl<'a> DirectoryPeaker {
   pub fn new() -> DirectoryPeaker {
     DirectoryPeaker {
       menu: DirectoryPeaker::menu(),
-      name_file: DirectoryPeaker::nameFile()
+      file_namer: DirectoryPeaker::file_namer(),
     }
   }
 
   // create or edit file menu
   fn menu() -> SelectionPicker {
-    SelectionPicker::new(
-      Box::new(["create", "edit"]),
-      "Write 'create' or 'edit'",
-    )
+    SelectionPicker::new(Box::new(["create", "edit"]), "Write 'create' or 'edit'")
   }
 
   // used both by new and edit file
   // to specify which file to target
-  fn nameFile() -> StaticWriter {
-    StaticWriter::new(
-      "Write filename"
-    )
+  fn file_namer() -> StaticWriter {
+    StaticWriter::new("Write filename")
   }
 }
 
@@ -41,10 +60,15 @@ impl Querier {
     Querier {}
   }
 
-  // displays description and parses input from user
-  fn input_format<T: Promptable>(&self, input: String, selection: &T) -> Option<String> {
-    selection.describe();
-    selection.select(input)
+  // reads one line from stdin
+  // used as closure protocol for input
+  pub fn stdin_line(&self) -> String {
+    let mut input = String::new();
+    io::stdin()
+      .read_line(&mut input)
+      .expect("Failed to read line");
+    // trimming newline char at end
+    input.trim().to_string()
   }
 
   // keeps asking for input until selected
@@ -52,16 +76,17 @@ impl Querier {
   // that you are waiting for query
   pub fn prompt<'a, T, F>(&self, selection: &T, get_input: F) -> Result<String, String>
   where
-    // promptable selector
+    // promptable input selector
     T: Promptable,
     // input generating closure,
     // normally formatted from terminal
-    F: Fn() -> &'a String,
+    F: Fn() -> String,
   {
     let mut result = None;
     while result.is_none() {
-      // cant own more than once, with closure 'must' clone
-      result = self.input_format(get_input().clone(), selection);
+      // clone borrow, there are repeated closure returns
+      selection.describe();
+      result = selection.select(get_input());
     }
     result.ok_or(String::from("Prompt Error"))
   }
@@ -100,6 +125,8 @@ impl FileCommencer {
   }
 }
 
+// to be prompted to screen and wait for user input,
+// used with querier.prompt()
 pub trait Promptable {
   // how to select output from option
   fn select(&self, option: String) -> Option<String>;
@@ -108,13 +135,9 @@ pub trait Promptable {
 }
 
 /*
-* ------------------------------------------------------
-* Promptable selection input component
-* ------------------------------------------------------
-* able to be prompted to screen and wait for user input,
-* used with querier.prompt()
-* 
-*
+* ------------------------------
+*  ⬇️ Promptable selection inputs
+* ------------------------------
 */
 
 pub struct SelectionPicker {
@@ -124,7 +147,7 @@ pub struct SelectionPicker {
   description: &'static str,
 }
 
-// goes into a holder to represent a selection
+// match input with arbitrary length options
 impl SelectionPicker {
   fn new(options: Box<[&'static str]>, description: &'static str) -> SelectionPicker {
     SelectionPicker {
@@ -181,6 +204,12 @@ impl Promptable for StaticWriter {
   }
 }
 
+/*
+* ------------------------------
+*  ⬆️
+* ------------------------------
+*/
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -216,20 +245,13 @@ mod tests {
   fn querier_keep_prompting_input() {
     let input = String::from("create");
     let menu = SelectionPicker::new(
-      Box::new(["create","edit"]),
+      Box::new(["create", "edit"]),
       "Do you want to create or edit file?",
     );
 
     let querier = Querier::new();
-    let result = querier.prompt(&menu, || &input);
+    let result = querier.prompt(&menu, || querier.stdin_line());
     assert!(result.is_ok());
-    
-    /*
-    let querier = Querier::new();
-    let result = querier.prompt(&menu, || &io::stdin().read_line(line)
-      .expect("Failed to read line"));
-    });
-    */
   }
 
   #[test]
