@@ -30,7 +30,7 @@ struct DirectoryPeaker {
   file_namer: StaticWriter,
 }
 
-// before editing files, this is the control
+// before working with files, this is the control
 // to select exisiting or create new file
 impl<'a> DirectoryPeaker {
   pub fn new() -> DirectoryPeaker {
@@ -71,20 +71,18 @@ impl Querier {
     input.trim().to_string()
   }
 
-  // keeps asking for input until selected
-  // @refactor: name imply more meaning
-  // that you are waiting for query
+  // keeps asking for input until selected returns something
   pub fn prompt<'a, T, F>(&self, selection: &T, get_input: F) -> Result<String, String>
   where
     // promptable input selector
     T: Promptable,
     // input generating closure,
-    // normally formatted from terminal
+    // can be specified or use querier.stdin_line()
     F: Fn() -> String,
   {
     let mut result = None;
     while result.is_none() {
-      // clone borrow, there are repeated closure returns
+      // display then ask for input
       selection.describe();
       result = selection.select(get_input());
     }
@@ -125,7 +123,7 @@ impl FileCommencer {
   }
 }
 
-// to be prompted to screen and wait for user input,
+// prompted to screen and wait for user input,
 // used with querier.prompt()
 pub trait Promptable {
   // how to select output from option
@@ -170,7 +168,6 @@ impl Promptable for SelectionPicker {
       .iter()
       // find matching on option self field
       .find(|v| **v == option)
-      // 'unwrap' to move string object
       .and_then(|v| Some(v.to_string()))
   }
 }
@@ -180,7 +177,7 @@ pub struct StaticWriter {
   description: &'static str,
 }
 
-// only description label and > 0 text input
+// only description label and larger than 0 char input
 impl StaticWriter {
   fn new(description: &'static str) -> StaticWriter {
     StaticWriter { description }
@@ -195,7 +192,6 @@ impl Promptable for StaticWriter {
   // just checks if option input is not empty then
   // passes it back as accepted
   fn select(&self, option: String) -> Option<String> {
-    // no characters is none
     if option.chars().count() > 0 {
       Some(option)
     } else {
