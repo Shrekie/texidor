@@ -1,13 +1,13 @@
 use std::fs::File;
 use std::io;
 
-// before editing files, this is the control 
-// to select exisiting or create new file
 struct DirectoryPeaker {
   menu: SelectionPicker,
   name_file: StaticWriter
 }
 
+// before editing files, this is the control 
+// to select exisiting or create new file
 impl<'a> DirectoryPeaker {
   pub fn new() -> DirectoryPeaker {
     DirectoryPeaker {
@@ -33,9 +33,9 @@ impl<'a> DirectoryPeaker {
   }
 }
 
-// gets user input, stages selectors for input
 struct Querier {}
 
+// gets user input, stages selectors for input
 impl Querier {
   fn new() -> Querier {
     Querier {}
@@ -73,11 +73,11 @@ enum FileGrab {
   Existing,
 }
 
-// returns created or already existing files
 pub struct FileCommencer {
   // @todo: keep directory position state
 }
 
+// returns created or already existing files
 impl FileCommencer {
   fn new() -> FileCommencer {
     FileCommencer {}
@@ -117,7 +117,6 @@ pub trait Promptable {
 *
 */
 
-// goes into a holder to represent a selection
 pub struct SelectionPicker {
   // a tree of choices
   options: Box<[&'static str]>,
@@ -125,6 +124,7 @@ pub struct SelectionPicker {
   description: &'static str,
 }
 
+// goes into a holder to represent a selection
 impl SelectionPicker {
   fn new(options: Box<[&'static str]>, description: &'static str) -> SelectionPicker {
     SelectionPicker {
@@ -157,6 +157,7 @@ pub struct StaticWriter {
   description: &'static str,
 }
 
+// only description label and > 0 text input
 impl StaticWriter {
   fn new(description: &'static str) -> StaticWriter {
     StaticWriter { description }
