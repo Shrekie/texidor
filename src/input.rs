@@ -14,20 +14,44 @@ impl Ostrich {
       directory_peaker: DirectoryPeaker::new(),
     };
 
-    ostrich.file_menu();
+    // initializes file menu, edit or create a file.
+    // @todo: move this into a function, like file_menu_branch ex
+    match ostrich.file_menu() {
+      Ok(v) => {
+        ostrich
+          .directory_peaker
+          .file_commencer
+          // @todo: implement filename picker with StaticWriter
+          .grab("hellos.txt".to_string(), v);
+      }
+      Err(e) => {
+        println!("File menu error {}", e);
+      }
+    };
   }
 
-  // prompt the file menu
-  fn file_menu(&self) {
-    self
+  // prompt the file menu, returning file command
+  fn file_menu(&self) -> Result<FileGrab, String> {
+    let result = self
       .querier
       .prompt(&self.directory_peaker.menu, || self.querier.stdin_line());
+
+    // matching file command
+    match result {
+      Ok(v) => match v.as_ref() {
+        "create" => Ok(FileGrab::New),
+        "edit" => Ok(FileGrab::Existing),
+        &_ => Err(v),
+      },
+      Err(v) => Err(v),
+    }
   }
 }
 
 struct DirectoryPeaker {
   menu: SelectionPicker,
   file_namer: StaticWriter,
+  file_commencer: FileCommencer,
 }
 
 // before working with files, this is the control
@@ -37,6 +61,7 @@ impl<'a> DirectoryPeaker {
     DirectoryPeaker {
       menu: DirectoryPeaker::menu(),
       file_namer: DirectoryPeaker::file_namer(),
+      file_commencer: FileCommencer::new(),
     }
   }
 
