@@ -31,6 +31,7 @@ impl Ostrich {
   }
 
   // prompt the file menu, returning file command
+  // @suggestion: maybe call this prompt menu
   fn file_menu(&self) -> Result<FileGrab, String> {
     let result = self
       .querier
